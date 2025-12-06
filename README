@@ -1,0 +1,81 @@
+README
+
+スマブラSPコミュニティで利用されているトーナメント管理サイトのChallongeとstart.ggから大会の順位の情報を収集するためのスクリプト群です。
+特に、東北で行われた大会の収集のために作成しておりますが、必要に応じて改変してください。
+
+===challonge===
+Challonge から順位（standings）を取って CSV にするスクリプト
+
+  - `import challonge` を使って Challonge API を叩きます。
+
+前提（必須）
+- Python 3.x
+- 依存: challonge, pandas
+- 環境変数を設定しておく：
+    export CHALLONGE_USER_NAME="your_name"
+    export CHALLONGE_API_KEY="your_api_key"
+
+大会リストは手動で用意する（例あり）
+- 手作業で `tourneylist_challonge.csv` を作成しておく
+- このファイル形式は、スクリプトが `pd.read_csv("tourneylist_challonge.csv")` で読む前提
+  （リポジトリ内の例/既存のCSVを参考に同じ列構成で作る）
+
+何をするスクリプトか（get_standings.py）
+1) Challonge API にログイン（set_credentials）
+2) `tourneylist_challonge.csv` を読み込む
+3) 各大会について Challonge から順位情報を取得し、
+   大会名（tourney_name）を列名にして DataFrame を横に結合していく
+4) 取得に失敗した大会は例外で拾って errortlist に入れて最後に表示する
+5) 結果を `standings_challonge.csv` として保存する
+
+実行
+- `tourneylist_challonge.csv` を用意した上で：
+    python3 get_standings.py
+
+出力
+- standings_challonge.csv  （結合した順位表）
+- 失敗した大会名のリスト（errortlist）が標準出力に表示される
+
+注意
+- get_standings.py 内に `...` というプレースホルダ行が入っているので、
+  その部分は「大会IDの取り方」「参加者/順位の取得処理」を書いた実装部分になります。
+  例CSV（tourneylist_challonge.csv）に合わせて、そのブロックが動く状態になっていることを確認してください。
+
+
+===startgg===
+start.gg（SmashGG）から大会データを取ってCSV化するスクリプト群
+
+概要
+- 1) collect_tourney_to_csv.py で「大会のリスト（一覧）」を作る
+- 2) get_placement_from_list.py で「順位のリスト（各大会の順位表）」を作る
+
+前提
+- 環境変数 SMASHGG_TOKEN に start.gg のAPIトークンを設定しておく
+  export SMASHGG_TOKEN="..."
+
+使い方（手順）
+1. 大会一覧CSVを作る
+   - 実行:
+       python3 collect_tourney_to_csv.py
+   - 処理:
+       指定した地域（例：東北の各県）・ゲームID等で start.gg を検索して大会一覧を取得する
+   - 出力:
+       data/tournament_list.csv
+
+2. 順位表CSVを作る（大会一覧CSVが必要）
+   - 実行:
+       python3 get_placement_from_list.py
+   - 入力:
+       tournament_list.csv（※ collect_tourney_to_csv.py の出力）
+   - 処理:
+       tournament_list.csv の slug から eventID を取得し、
+       各大会の standings（placement + player情報）をページングで集めてCSV化する
+       まだ結果が出ていない大会は standings が空になるのでスキップする
+   - 出力:
+       data/standings_startgg_name.csv  （列=大会名 / 値=gamerTag）
+       data/standings_startgg_ID.csv    （列=大会名 / 値=player id）
+
+ファイル
+- collect_tourney_to_csv.py：大会リスト作成（→ data/tournament_list.csv）
+- get_placement_from_list.py：順位リスト作成（→ data/standings_startgg_*.csv）
+
